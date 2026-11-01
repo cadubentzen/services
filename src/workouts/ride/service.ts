@@ -1200,7 +1200,9 @@ export class WorkoutRide extends IncyclistService{
         }
         else if (request.minPower !== undefined && request.maxPower !== undefined && request.minPower !== request.maxPower) {
             if (request.minPower !== this.currentLimits?.minPower || request.maxPower !== this.currentLimits?.maxPower) {
-                request.targetPower = request.minPower;
+                // a range (e.g. a zone such as "Z2") starts in its middle, like Zwift does in
+                // ERG mode - not at its lower end; the rider can still move within the range
+                request.targetPower = Math.round((request.minPower + request.maxPower) / 2);
             }
             else {
                 request.targetPower = this.currentLimits?.targetPower;

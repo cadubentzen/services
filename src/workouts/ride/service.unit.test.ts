@@ -938,6 +938,22 @@ describe('WorkoutRide',()=>{
             expect(s.currentLimits.targetPower).toBe(220)
         })
 
+        // A zone/range step (e.g. intervals.icu "Z2" = 56-75% FTP) starts in the middle of the
+        // range, like Zwift's ERG mode - not at its lower end.
+        test('a range step starts with the target in the middle of the range',()=>{
+            const woZone = new Workout({type:'workout',name:'Zone Workout'})
+            woZone.addSegment( {type:'segment', text:'Test Segment', steps: [
+                {type:'step', steady:true, work:true, duration:120, power:{min:56,max:75,type:'pct of FTP'}, text:'Z2'}
+            ] })
+            s.workout = woZone
+            s.settings = {ftp:143}
+            s.setCurrentLimits(0) // start of the step
+
+            expect(s.currentLimits.minPower).toBe(80)
+            expect(s.currentLimits.maxPower).toBe(107)
+            expect(s.currentLimits.targetPower).toBe(94)
+        })
+
         // Scenario 2b: pct-of-FTP, range, at boundary (no headroom left to nudge) - FTP scales and
         // the target must track it to the new boundary, not freeze at its pre-swipe absolute value.
         test('pct-of-FTP range step at boundary: FTP scales and targetPower follows it',()=>{

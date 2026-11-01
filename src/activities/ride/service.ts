@@ -461,6 +461,20 @@ export class ActivityRideService extends IncyclistService {
         return { min: limits.minPower ?? limits.maxPower, max: limits.maxPower }
     }
 
+    protected getGearCount(): number | undefined {
+        try {
+            const mode = this.getDeviceRide().getCyclingMode()
+            const virtshift = mode?.getSetting('virtshift')
+            if (virtshift !== 'Incyclist' && virtshift !== 'SmartTrainer')
+                return undefined
+            const startGear = mode.getProperties()?.find( p => p.key === 'startGear')
+            return startGear?.max
+        }
+        catch {
+            return undefined
+        }
+    }
+
     protected buildDashboardInfo(currentValues, avgMaxStats, display) {
 
 
@@ -506,7 +520,7 @@ export class ActivityRideService extends IncyclistService {
         info.push(cadenceInfo);
 
         if (gear) {
-            info.push({ title: 'Gear', data: [{ value: gear }] });
+            info.push({ title: 'Gear', data: [{ value: gear }], gearCount: this.getGearCount() });
         }
 
         return info;

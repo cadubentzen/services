@@ -56,6 +56,7 @@ export interface ActivityDashboardItem {
     size?: number
     dataState?: HealthStatus
     gauge?: DashboardGauge
+    gearCount?: number                // Gear item only: number of virtual gears (absent without virtual gears)
 }
 
 export interface CurrentActivityData { 

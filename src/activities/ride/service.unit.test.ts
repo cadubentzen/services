@@ -63,7 +63,8 @@ describe('ActivityRideService',()=>{
             return {
                 on: jest.fn(emitter.on.bind(emitter)),
                 off: jest.fn(emitter.off.bind(emitter)),
-                getSport: jest.fn()
+                getSport: jest.fn(),
+                getCyclingMode: jest.fn().mockReturnValue(props?.cyclingMode)
             }
         })
 
@@ -767,6 +768,50 @@ describe('ActivityRideService',()=>{
             const gauge = getItem('Heartrate').gauge
             expect(gauge.max).toBe(185)
             expect(gauge.zone).toBe(1)
+        })
+    })
+
+    describe('dashboard gear count',()=>{
+        let service:ActivityRideService
+        const getItem = (title:string) => service.getDashboardDisplayProperties().find(i=>i.title===title)
+
+        beforeEach( ()=>{
+            service = new ActivityRideService()
+            jest.useFakeTimers().setSystemTime(new Date('2020-01-01'))
+        })
+        afterEach( ()=>{
+            service.stop()
+            service.reset()
+            jest.useRealTimers()
+        })
+
+        const setup = (gearStr:string, virtshift:string) => {
+            const route  = createFromJson(sydney as unknown as RouteApiDetail)
+            const cyclingMode = {
+                getSetting: jest.fn( (name:string)=> name==='virtshift' ? virtshift : undefined),
+                getProperties: jest.fn().mockReturnValue([{key:'startGear',max:24}])
+            }
+            mockServices(service,{route,cyclingMode,startSettings:{startPos:0,realityFactor:100,type:'Route'}})
+            service.init()
+            ;(service as any).current.deviceData = { power:152, gearStr }
+        }
+
+        test("Gear item has gearCount 24 in 'App only' virtual shifting",()=>{
+            setup('12','Incyclist')
+            expect(getItem('Gear').gearCount).toBe(24)
+        })
+
+        test("Gear item has no gearCount in 'Mixed' mode",()=>{
+            setup('+2','Mixed')
+            expect(getItem('Gear').gearCount).toBeUndefined()
+        })
+
+        test('Gear item has no gearCount when the cycling mode is unavailable',()=>{
+            setup('12','Incyclist')
+            const ride = (service as any).getDeviceRide()
+            ride.getCyclingMode.mockImplementation(()=>{throw new Error('x')})
+            ;(service as any).getDeviceRide = jest.fn().mockReturnValue(ride)
+            expect(getItem('Gear').gearCount).toBeUndefined()
         })
     })
 

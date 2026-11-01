@@ -449,7 +449,8 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
 
 
             const virtualShiftingEnabled = this.isVirtualShiftingEnabled()
-            const showShiftingButtons = virtualShiftingEnabled && !this.actualWorkout && !!this.activity
+            // not while a workout runs - but again once it is done (actualWorkout keeps what was ridden)
+            const showShiftingButtons = virtualShiftingEnabled && !this.getWorkoutRide().inUse() && !!this.activity
 
             const props = {
                 workout: this.actualWorkout, route: this.route, activity: this.activity,  state:this.state,
@@ -835,6 +836,8 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
                 if (res?.changed) {
                     this.getRideModeService().sendUpdate()
                 }
+                // e.g. the shifting buttons (with the gear) come back now that the workout is over
+                this.observer?.emit('overlay-update',this.getDisplayProperties())
 
             }).catch( err=>{ this.logError(err,'checkCyclingModeToggle') })
         }

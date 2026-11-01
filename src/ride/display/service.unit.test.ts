@@ -753,4 +753,49 @@ describe('RideDisplayService', () => {
             expect(addScreenshot).toHaveBeenCalledWith({ fileName: '/shots/screenshot-1.jpg', time: 61, moment: 'summit', isHighlight: true })
         })
     })
+
+    describe('shifting buttons after a workout', () => {
+        let service: RideDisplayService
+        let workoutInUse: boolean
+        const appMode = { isSIM: () => true, isResistance: () => false, getSetting: (key: string) => key === 'virtshift' ? 'Incyclist' : undefined }
+        const resetCyclingMode = jest.fn()
+
+        beforeEach(() => {
+            resetCyclingMode.mockResolvedValue({ changed: true })
+            workoutInUse = true
+            Inject('WorkoutRide', { inUse: jest.fn(() => workoutInUse) })
+            Inject('DeviceRide', { getCyclingMode: jest.fn().mockReturnValue(appMode), resetCyclingMode })
+            Inject('ActivityRide', { getActivity: jest.fn().mockReturnValue({ time: 300 }), getPrevRidesListDisplay: jest.fn().mockReturnValue([]) })
+            Inject('UserSettings', { get: jest.fn((_k: string, def: unknown) => def), getValue: jest.fn((_k: string, def: unknown) => def) })
+            service = new RideDisplayService()
+            service.reset()
+            service = new RideDisplayService()
+            ;(service as any).observer = new Observer()
+            ;(service as any).state = 'Active'
+            ;(service as any).actualWorkout = new Workout({ type: 'workout', name: 'Done' })
+            ;(service as any).displayService = { getDisplayProperties: () => ({}), sendUpdate: jest.fn() }
+            jest.spyOn(service, 'getRideType').mockReturnValue('Video')
+            jest.spyOn(service as any, 'route', 'get').mockReturnValue(undefined)
+        })
+
+        afterEach(() => {
+            Inject('WorkoutRide', null)
+            Inject('DeviceRide', null)
+            Inject('ActivityRide', null)
+            Inject('UserSettings', null)
+            jest.clearAllMocks()
+        })
+
+        test('hidden while the workout runs, shown again once it is done (the gear is back)', async () => {
+            expect(service.getDisplayProperties().showShiftingButtons).toBe(false)
+
+            workoutInUse = false
+            const emit = jest.spyOn((service as any).observer, 'emit')
+            ;(service as any).checkCyclingModeToggle()
+            await waitNextTick()
+
+            expect(resetCyclingMode).toHaveBeenCalled()
+            expect(emit).toHaveBeenCalledWith('overlay-update', OC({ showShiftingButtons: true }))
+        })
+    })
 })

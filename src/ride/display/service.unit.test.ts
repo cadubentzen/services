@@ -1,4 +1,5 @@
 
+import { EventEmitter } from 'node:events'
 import { Device } from 'tcx-builder'
 import { Inject } from '../../base/decorators'
 import { Workout } from '../../workouts'
@@ -507,6 +508,53 @@ describe('RideDisplayService', () => {
 
         afterEach(() => {
             cleanupMocks()
+        })
+
+        // Regression: stopping a ride removed every device listener except 'key-pressed', so
+        // each later ride of the session added one more - from the 2nd ride on every
+        // controller key press (e.g. a shift) was handled twice, three times, ...
+        describe('controller keys', () => {
+            const setupDevices = () => {
+                const devices = new EventEmitter() as EventEmitter & Record<string, jest.Mock>
+                devices.pause = jest.fn()
+                devices.stop = jest.fn()
+                devices.enforceSimulator = jest.fn()
+                Inject('DeviceRide', devices)
+                return devices
+            }
+            const startRide = (s) => {
+                s.initDeviceHandlers()      // what start() does when the devices are started
+                s.state = 'Active'
+            }
+
+            test('a stopped ride no longer receives controller keys', async () => {
+                service = new RideDisplayService()
+                setupMocks(service, { activity: { id: 'a1' } })
+                const devices = setupDevices()
+                service.onDeviceKeyPressed = jest.fn()
+                startRide(service)
+
+                await service.stopRide({ noStateUpdates: true })
+                devices.emit('key-pressed', { key: 'up', duration: 100 }, 'udid')
+
+                expect(service.onDeviceKeyPressed).not.toHaveBeenCalled()
+            })
+
+            test('in the 2nd ride of a session a key press is handled once', async () => {
+                service = new RideDisplayService()
+                setupMocks(service, { activity: { id: 'a1' } })
+                const devices = setupDevices()
+                service.onDeviceKeyPressed = jest.fn()
+                startRide(service)
+                await service.stopRide({ noStateUpdates: true })
+                setupMocks(service, { activity: { id: 'a2' } })
+                Inject('DeviceRide', devices)
+                startRide(service)
+
+                devices.emit('key-pressed', { key: 'up', duration: 100 }, 'udid')
+
+                expect(service.onDeviceKeyPressed).toHaveBeenCalledTimes(1)
+            })
         })
 
         // Regression: the "activity stopped" log used the *current* state (checked before

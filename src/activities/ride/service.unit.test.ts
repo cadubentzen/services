@@ -543,6 +543,19 @@ describe('ActivityRideService',()=>{
             expect(protectedMember(service,'state')).toBe('idle')
         })
 
+        // Regression: a ride that ended by itself (end of the workout or the route) is stopped
+        // before the rider sees its end dialog, and stop() drops the observer - "Delete" there
+        // returned early and the activity stayed in the list
+        test('ride ended by itself (completed, observer already dropped) -> repo delete still happens',async ()=>{
+            const activity = setup('completed')
+            delete (service as any).observer
+
+            await service.delete()
+
+            expect(repoDelete).toHaveBeenCalledWith(activity.id)
+            expect(protectedMember(service,'state')).toBe('idle')
+        })
+
         test('no observer (already torn down) -> resolves without touching the repo',async ()=>{
             setup('paused')
             delete (service as any).observer

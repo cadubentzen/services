@@ -801,7 +801,9 @@ export class ActivityRideService extends IncyclistService {
 
     async delete() {
 
-        if (this.state==='idle' || !this.observer)
+        // a ride that ended by itself (end of the route or of the workout) is 'completed' and has
+        // already dropped its observer - it can still be deleted
+        if (this.state==='idle' || (!this.observer && this.state!=='completed') || !this.activity)
             return;
 
         if (this.state!=='completed') {

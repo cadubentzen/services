@@ -495,6 +495,35 @@ describe('ActivityRideService',()=>{
     // fired before delete()'s next line could attach a 'completed' listener - the listener missed
     // it and the returned promise hung forever on a ride that wasn't already 'completed' (e.g.
     // right after "End Ride", which only pauses, never stops/completes the ride).
+    describe('getCurrentValues - time left',()=>{
+        let service:ActivityRideService
+
+        beforeEach( ()=>{
+            service = new ActivityRideService()
+            jest.useFakeTimers().setSystemTime(new Date('2020-01-01'));
+        })
+
+        afterEach( ()=>{
+            service.stop()
+            resetSingleton(service)
+            jest.resetAllMocks();
+            jest.useRealTimers()
+        })
+
+        test('during a workout, the time left in the workout - not the estimate for the route',()=>{
+            const route  = createFromJson(sydney as unknown as RouteApiDetail)
+            const workoutRide = { inUse: jest.fn().mockReturnValue(true), getRemainingTime: jest.fn().mockReturnValue(1234) }
+            mockServices(service,{route,startSettings:{startPos:0,realityFactor:100,type:'Route'}, workoutRide})
+            service.init()
+
+            expect(service.getCurrentValues().timeRemaining).toBe(1234)
+
+            // the workout is done: the route's estimate again (none here, the rider isn't moving)
+            workoutRide.getRemainingTime.mockReturnValue(undefined)
+            expect(service.getCurrentValues().timeRemaining).toBeUndefined()
+        })
+    })
+
     describe('delete',()=>{
         let service:ActivityRideService
         let observer:Observer

@@ -544,9 +544,10 @@ export class ActivityRideService extends IncyclistService {
         if (Number.isNaN(distanceRemaining)) distanceRemaining=undefined
         if (distanceRemaining<0) distanceRemaining=0
 
-        let timeRemaining 
+        // during a workout: the time left in the workout, otherwise the estimate for the route
+        let timeRemaining = this.getWorkoutRide()?.getRemainingTime?.()
         
-        if (speed>0 && this.durationCalculator)  {
+        if (timeRemaining===undefined && speed>0 && this.durationCalculator)  {
             timeRemaining = this.durationCalculator.getRemainingTime(
                 {route:this.current.route, speed:this.current.deviceData?.speed,routePos:this.activity.distance+(this.activity?.startPos??0), endPos:this.current?.endPos}
             )    

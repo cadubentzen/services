@@ -938,6 +938,22 @@ describe('WorkoutRide',()=>{
             expect(s.currentLimits.targetPower).toBe(220)
         })
 
+        test('getRemainingTime: the time left until the end of the workout, only while it runs',()=>{
+            const wo = new Workout({type:'workout',name:'Two steps'})
+            wo.addSegment( {type:'segment', text:'Test Segment', steps: [
+                {type:'step', steady:true, work:false, duration:60, power:{min:44,max:55,type:'pct of FTP'}, text:'Z1'},
+                {type:'step', steady:true, work:true, duration:60, power:{min:56,max:75,type:'pct of FTP'}, text:'Z2'}
+            ] })
+            s.workout = wo
+            s.settings = {ftp:143}
+            s.state = 'active'
+            s.setCurrentLimits(45)
+            expect(service.getRemainingTime()).toBe(75)
+
+            s.state = 'completed'
+            expect(service.getRemainingTime()).toBeUndefined()
+        })
+
         // A zone/range step (e.g. intervals.icu "Z2" = 56-75% FTP) starts in the middle of the
         // range, like Zwift's ERG mode - not at its lower end.
         test('a range step starts with the target in the middle of the range',()=>{

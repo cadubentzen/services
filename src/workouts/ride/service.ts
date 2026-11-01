@@ -950,6 +950,17 @@ export class WorkoutRide extends IncyclistService{
     }
 
     /**
+     * Provides the time left until the end of the workout
+     *
+     * @returns the remaining time in seconds, or _undefined_ when no workout is ridden
+     */
+    getRemainingTime(): number | undefined {
+        if (!this.inUse() || !this.workout || this.trainingTime===undefined)
+            return undefined
+        return Math.max(0, this.workout.getEnd() - this.trainingTime)
+    }
+
+    /**
      * Provides the current workout beeing ridden
      * 
      * @return [[Workout]] the current workout or _undefined_ if init() hasn't been called

@@ -564,7 +564,7 @@ export class ActivityRideService extends IncyclistService {
 
             const speedDetails = this.activity.sport==='cycling' ?
                 { value: formatNumber(C(avgSpeed,'speed'),1), label: 'avg' }:
-                { value: data.value, label:'max'  };
+                { value: data.value, label:'avg' };
 
             const powerDetails = { value: formatNumber(stats?.power?.avg, 0), label: 'avg' };
             const heartrateDetails = { value: formatNumber(stats?.hrm?.avg, 0), label: 'avg' };

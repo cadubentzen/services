@@ -686,6 +686,19 @@ describe('ActivityRideService',()=>{
             expect(props).toMatchSnapshot()
         })
 
+        test('getMaximumValues labels the average speed \'avg\' for rowing',()=>{
+            const route  = createFromJson(sydney as unknown as RouteApiDetail)
+
+            mockServices(service,{route,startSettings:{startPos:0,realityFactor:100,type:'Route'},ride})
+            service.init()
+
+            const activity = { sport:'rowing', stats:{ speed:{avg:10} } }
+            ;(service as any).activity = activity
+            const result = (service as any).getMaximumValues()
+
+            expect(result.speedDetails.label).toBe('avg')
+        })
+
     })
 
     describe('ActiveRideService', () => {

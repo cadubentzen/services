@@ -448,7 +448,8 @@ export class ActivityRideService extends IncyclistService {
 
     protected getDashboardFtp(): number | undefined {
         const workout = this.getWorkoutRide()
-        return workout.inUse() ? workout.getCurrentFtp() : this.activity?.user?.ftp
+        const userFtp = this.activity?.user?.ftp
+        return workout.inUse() ? (workout.getCurrentFtp() ?? userFtp) : userFtp
     }
 
     protected getDashboardPowerTarget(): { min: number, max: number } | undefined {
@@ -462,17 +463,12 @@ export class ActivityRideService extends IncyclistService {
     }
 
     protected getGearCount(): number | undefined {
-        try {
-            const mode = this.getDeviceRide().getCyclingMode()
-            const virtshift = mode?.getSetting('virtshift')
-            if (virtshift !== 'Incyclist' && virtshift !== 'SmartTrainer')
-                return undefined
-            const startGear = mode.getProperties()?.find( p => p.key === 'startGear')
-            return startGear?.max
-        }
-        catch {
+        const mode = this.getDeviceRide()?.getCyclingMode?.()
+        const virtshift = mode?.getSetting('virtshift')
+        if (virtshift !== 'Incyclist' && virtshift !== 'SmartTrainer')
             return undefined
-        }
+        const startGear = mode.getProperties()?.find( p => p.key === 'startGear')
+        return startGear?.max
     }
 
     protected buildDashboardInfo(currentValues, avgMaxStats, display) {

@@ -749,9 +749,27 @@ describe('ActivityRideService',()=>{
                 getCurrentLimits: jest.fn().mockReturnValue({})
             }
             setup({workoutRide})
+            ;(service as any).activity.user = {}
             const gauge = getItem('Power').gauge
             expect(gauge.zones).toBeUndefined()
             expect(gauge.target).toBeUndefined()
+        })
+
+        test('Power gauge falls back to the activity FTP when the workout has no FTP',()=>{
+            const workoutRide = {
+                inUse: jest.fn().mockReturnValue(true),
+                getCurrentFtp: jest.fn().mockReturnValue(undefined),
+                getCurrentLimits: jest.fn().mockReturnValue({})
+            }
+            setup({workoutRide})
+            ;(service as any).activity.user = { ftp: 200 }
+            expect(getItem('Power').gauge.max).toBe(320)
+        })
+
+        test('Power gauge is neutral when no workout runs and the activity has no FTP',()=>{
+            setup()
+            ;(service as any).activity.user = {}
+            expect(getItem('Power').gauge.zones).toBeUndefined()
         })
 
         test('Heartrate gauge is neutral without user.maxHr',()=>{
@@ -806,10 +824,22 @@ describe('ActivityRideService',()=>{
             expect(getItem('Gear').gearCount).toBeUndefined()
         })
 
+        test("Gear item has gearCount in 'SmartTrainer' mode",()=>{
+            setup('12','SmartTrainer')
+            expect(getItem('Gear').gearCount).toBe(24)
+        })
+
+        test('Gear item has no gearCount without a startGear property',()=>{
+            setup('12','Incyclist')
+            const mode = (service as any).getDeviceRide().getCyclingMode()
+            mode.getProperties.mockReturnValue([])
+            expect(getItem('Gear').gearCount).toBeUndefined()
+        })
+
         test('Gear item has no gearCount when the cycling mode is unavailable',()=>{
             setup('12','Incyclist')
             const ride = (service as any).getDeviceRide()
-            ride.getCyclingMode.mockImplementation(()=>{throw new Error('x')})
+            ride.getCyclingMode.mockReturnValue(undefined)
             ;(service as any).getDeviceRide = jest.fn().mockReturnValue(ride)
             expect(getItem('Gear').gearCount).toBeUndefined()
         })

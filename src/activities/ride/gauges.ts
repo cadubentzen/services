@@ -11,7 +11,7 @@ const HR_ZONE_NAMES = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
 // upper bound of each heart rate zone in % of max HR; the gauge starts at 50 %
 const HR_ZONE_LIMITS = [60, 70, 80, 90, 100]
 // zones are lower-bound inclusive: Z1 <60, Z2 60-70, Z3 70-80, Z4 80-90, Z5 >=90
-const HR_ZONE_SWITCH_PCT = [60, 70, 80, 90]
+const HR_ZONE_SWITCH_PCT = HR_ZONE_LIMITS.slice(0, -1)
 const HR_GAUGE_MIN_PCT = 50
 const HR_GAUGE_DEFAULT_MIN = 40
 const HR_GAUGE_DEFAULT_MAX = 200

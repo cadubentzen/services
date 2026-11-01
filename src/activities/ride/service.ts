@@ -506,7 +506,8 @@ export class ActivityRideService extends IncyclistService {
         if (this.activity?.routeType !== 'Free-Ride' && this.activity?.routeType !== 'None') {
             const rf = this.activity?.realityFactor ?? 100;
             const slopeInfo = rf === 100 ? '' : `RF ${rf.toFixed(0)}%`;
-            info.push({ title: 'Slope', data: [{ value: formatNumber(slope, 1), unit: '%', info: slopeInfo }, elevationGain] });
+            info.push({ title: 'Slope', data: [{ value: formatNumber(slope, 1), unit: '%', info: slopeInfo }, elevationGain],
+                elevation: this.getElevationProgress() });
         }
         info.push({ title: 'Heartrate', data: [{ value: formatNumber(heartrate, 0), unit: 'bpm' }, heartrateDetails], dataState: this.current.dataState?.heartrate,
             gauge: getHeartrateGauge(heartrate, this.getUserSettings().getValue('user.maxHr', undefined)) });
@@ -577,6 +578,16 @@ export class ActivityRideService extends IncyclistService {
             this.logError(err,'getAverageValues',{stats:this.activity?.stats})
             return {}
         }
+    }
+
+    /** elevation gained so far and still to climb, both at once (the HUD shows them next to time and distance) */
+    protected getElevationProgress():{value:string, remaining?:string, unit:string} {
+        const [C,U] = this.getUnitConversionShortcuts()
+        const done = this.current.elevationGainDisplay ?? 0
+        let todo = this.getTotalElevation() - done
+        if (Number.isNaN(todo)) todo = undefined
+        const remaining = todo === undefined ? undefined : `-${C(Math.max(0,todo),'elevation').toFixed(0)}`
+        return { value: C(done,'elevation')?.toFixed(0) ?? '', remaining, unit: U('elevation') }
     }
 
     protected getMaximumValues() {

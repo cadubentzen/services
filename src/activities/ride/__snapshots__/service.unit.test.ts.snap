@@ -115,6 +115,11 @@ exports[`ActivityRideService getDashboardDisplayProperties directly after init, 
         "value": "0",
       },
     ],
+    "elevation": {
+      "remaining": "-30",
+      "unit": "m",
+      "value": "0",
+    },
     "title": "Slope",
   },
   {

@@ -46,7 +46,7 @@ export class UserSettingsDisplayService extends IncyclistService {
 
     getDisplayProps():UserSettingsDisplayProps {
         const user = this.getUser()
-        const {username,ftp,imageUrl } = user
+        const {username,ftp,maxHr,imageUrl } = user
         const c = this.getUnitConverter()
 
         const weightValue = user?.weight===undefined ? undefined : c.convert( user.weight, 'weight',{digits:1}) 
@@ -60,11 +60,13 @@ export class UserSettingsDisplayService extends IncyclistService {
             imageUrl,
             username,
             ftp,
+            maxHr,
             weight: { value: weightValue, unit: weightUnit},
             units,
             unitsOptions,
             onChangeWeight: this.setWeight.bind(this),
             onChangeFtp: this.setFtp.bind(this),
+            onChangeMaxHr: this.setMaxHr.bind(this),
             onChangeName: this.setName.bind(this),
             onChangeUnits: this.setUnits.bind(this)
         }
@@ -96,6 +98,17 @@ export class UserSettingsDisplayService extends IncyclistService {
 
     setFtp( ftp:number) {
         this.getUserSettings().set('user.ftp',ftp)
+        this.emitChanged()
+    }
+
+    /**
+     * Stores the user's maximum heart rate (used for heart rate zones)
+     *
+     * @param maxHr maximum heart rate in bpm; an empty value clears the setting
+     */
+    setMaxHr( maxHr: number | null | undefined) {
+        const value = (maxHr===null || maxHr===undefined) ? null : maxHr
+        this.getUserSettings().set('user.maxHr',value)
         this.emitChanged()
     }
 

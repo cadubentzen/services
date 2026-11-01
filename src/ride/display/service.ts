@@ -26,6 +26,8 @@ import { FreeRideOption } from "../../routes/list/types";
 import { RLVDisplayService } from "../route/RLVDisplayService";
 import { ActivityUpdate } from "../../activities/ride/types";
 import { getCoachesService } from "../../coaches";
+import { KeyMomentDetector } from "./key-moments";
+import type { KeyMoment, KeyMomentStep } from "./types";
 
 @Singleton
 export class RideDisplayService extends IncyclistService implements ICurrentRideService {
@@ -39,6 +41,7 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
     protected displayService: IRideModeService
     protected deviceData: DeviceData
     protected actualWorkout: Workout
+    protected keyMoments?: KeyMomentDetector
     protected hideAll: boolean = false
     protected simulated: boolean = false
 
@@ -300,7 +303,12 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
         }
     }
 
-    async takeScreenshot() {
+    /**
+     * Takes a screenshot of the ride and adds it to the activity
+     *
+     * @param moment the key moment it was requested for (see 'screenshot-request'), none if the user took it
+     */
+    async takeScreenshot(moment?:KeyMoment) {
         try {
 
             const fileName = this.getScreenshotName()
@@ -311,7 +319,8 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
             this.logEvent({ message: 'Screenshot done', result: { success, fileName: fullPath } });
 
             // add screenshot to activity
-            this.addScreenshot(fullPath)
+            if (success)
+                this.addScreenshot(fullPath, moment)
         }
         catch (err) {
             this.logError(err, 'takeScreenshot');
@@ -688,7 +697,54 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
         this.logEvent({ message: 'Activity went active', activity:this.activity?.id, interface: this.getBikeInterface() });
 
         this.getWorkoutRide().start()
+        this.initKeyMoments()
         this.setState('Active')
+    }
+
+    /**
+     * Key moments of the ride (shortly after the start, intervals, the summit, the finish) are
+     * captured automatically, like Zwift does: the UI is asked to take a screenshot
+     * ('screenshot-request'), which is then added to the activity just like a manual one.
+     * Can be turned off with the user setting `preferences.ride.autoScreenshots`.
+     */
+    protected initKeyMoments() {
+        delete this.keyMoments
+        try {
+            if (!this.getUserSettings().get('preferences.ride.autoScreenshots', true))
+                return
+
+            const isRoute = this.getRouteList().getStartSettings()?.type==='Route'
+            const route = isRoute ? this.route : undefined
+            const points = route?.points
+            const startPos = this.activity?.startPos ?? 0
+            const routeEnd = route?.description?.isLoop ? undefined : points?.at(-1)?.routeDistance
+            const endPos = this.activity?.endPos ?? routeEnd
+
+            this.keyMoments = new KeyMomentDetector({ points, startPos, endPos, steps: this.getKeyMomentSteps() })
+        }
+        catch(err) {
+            this.logError(err,'initKeyMoments')
+        }
+    }
+
+    protected getKeyMomentSteps():KeyMomentStep[]|undefined {
+        return this.actualWorkout?.steps?.map( (s:Step) => {
+            const {min,max} = s.power ?? {}
+            const intensity = (min!==undefined && max!==undefined) ? (min+max)/2 : (max ?? min)
+            return { start:s.start, end:s.end, intensity }
+        })
+    }
+
+    // the workout's steps changed (skipped forward/back, stopped, or started during the ride)
+    protected refreshKeyMomentSteps() {
+        this.keyMoments?.setSteps( this.getKeyMomentSteps(), this.activity?.time ?? 0 )
+    }
+
+    protected checkKeyMoment( moment:KeyMoment|undefined ) {
+        if (!moment)
+            return
+        this.logEvent({message:'key moment', moment, time:this.activity?.time})
+        this.observer?.emit('screenshot-request', moment)
     }
 
     protected onActivityPaused(autoResume) {
@@ -721,6 +777,7 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
 
             this.getRideModeService().onActivityUpdate(data,currentValues)
             this.observer?.emit('data-update',data,currentValues )
+            this.checkKeyMoment( this.keyMoments?.update({time,routeDistance}) )
         }
     }
 
@@ -1026,6 +1083,11 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
                 .on( 'stopped', this.onWorkoutStopped.bind(this) )
 //                .on( 'request-update', this.onWorkoutRequestUpdate.bind(this) )
                 .once( 'completed', this.onWorkoutCompleted.bind(this) )    
+                // after the handlers above changed the actual workout
+                .on( 'forward', this.refreshKeyMomentSteps.bind(this) )
+                .on( 'backward', this.refreshKeyMomentSteps.bind(this) )
+                .on( 'stopped', this.refreshKeyMomentSteps.bind(this) )
+            this.refreshKeyMomentSteps()
         }
         catch(err) {
             this.logError(err,'initWorkouts')
@@ -1282,10 +1344,15 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
     }
 
 
-    protected addScreenshot(fileName:string) {   
+    protected addScreenshot(fileName:string, moment?:KeyMoment) {   
         
         const time = this.activity.time 
         const info = this.getRideModeService().getScreenshotInfo(fileName,time)
+        if (moment) {
+            info.moment = moment
+            // the summit makes the best preview picture of the activity
+            info.isHighlight = moment==='summit' || undefined
+        }
         this.getActivityRide().addScreenshot(info)
         
     }

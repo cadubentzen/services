@@ -73,6 +73,8 @@ export type ScreenShotInfo = {
     position?: RoutePoint;
     time?:number,
     isHighlight?: boolean
+    /** the key moment of the ride it was taken automatically at (e.g. 'summit'), none if taken by the user */
+    moment?: string
 }
 
 export type ActivityType = 'IncyclistActivity'

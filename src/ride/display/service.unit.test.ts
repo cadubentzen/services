@@ -659,4 +659,98 @@ describe('RideDisplayService', () => {
         })
     })
 
+    describe('key moments - automatic screenshots', () => {
+        let service: RideDisplayService
+        let activityObserver: Observer
+        let emit: jest.SpyInstance
+        let values: { time: number, speed: number, routeDistance: number, distance: number }
+        const autoScreenshots = { value: true }
+        const addScreenshot = jest.fn()
+
+        beforeEach(() => {
+            activityObserver = new Observer()
+            values = { time: 0, speed: 8, routeDistance: 0, distance: 0 }
+            Inject('ActivityRide', {
+                init: jest.fn().mockReturnValue(activityObserver),
+                getCurrentValues: jest.fn(() => values),
+                getActivity: jest.fn().mockReturnValue({ startPos: 0, time: 0 }),
+                addScreenshot,
+            })
+            Inject('WorkoutRide', { start: jest.fn() })
+            Inject('RouteList', { getStartSettings: jest.fn().mockReturnValue({ type: 'Free-Ride' }), getSelected: jest.fn() })
+            Inject('UserSettings', { get: jest.fn((key: string, def: unknown) => key === 'preferences.ride.autoScreenshots' ? autoScreenshots.value : def) })
+            Inject('UIBinding', { takeScreenshot: jest.fn().mockResolvedValue('/shots/screenshot-1.jpg') })
+
+            service = new RideDisplayService()
+            ;(service as any).observer = new Observer()
+            service.reset()     // a singleton: start from a fresh instance, without spies of earlier tests
+            service = new RideDisplayService()
+            ;(service as any).observer = new Observer()
+            ;(service as any).displayService = { onActivityUpdate: jest.fn(), getScreenshotInfo: (fileName: string, time: number) => ({ fileName, time }), getCurrentRoute: jest.fn() }
+            ;(service as any).getUIBinding = () => ({ takeScreenshot: jest.fn().mockResolvedValue('/shots/screenshot-1.jpg') })
+            ;(service as any).setState = jest.fn()
+            emit = jest.spyOn((service as any).observer, 'emit')
+        })
+
+        afterEach(() => {
+            Inject('ActivityRide', null)
+            Inject('WorkoutRide', null)
+            Inject('RouteList', null)
+            Inject('UserSettings', null)
+            Inject('UIBinding', null)
+            autoScreenshots.value = true
+            jest.clearAllMocks()
+        })
+
+        const rideTo = (seconds: number) => {
+            ;(service as any).createActivity()
+            activityObserver.emit('started')
+            ;(service as any).state = 'Active'
+            for (let t = 0; t <= seconds; t++) {
+                values = { ...values, time: t, routeDistance: t * 8 }
+                activityObserver.emit('data')
+            }
+        }
+        const requests = () => emit.mock.calls.filter(([event]) => event === 'screenshot-request').map(([, moment]) => moment)
+
+        test('asks the UI for a screenshot shortly after the start', () => {
+            rideTo(90)
+            expect(requests()).toEqual(['start'])
+        })
+
+        test('not when the rider turned automatic screenshots off', () => {
+            autoScreenshots.value = false
+            rideTo(90)
+            expect(requests()).toEqual([])
+        })
+
+        test('the interval times follow the workout when the rider skips a step', () => {
+            const workoutObserver = new Observer()
+            const planned = new Workout({ type: 'workout', name: 'Test' })
+            planned.addSegment({ type: 'segment', steps: [
+                { type: 'step', duration: 300, power: { min: 50, max: 50, type: 'pct of FTP' }, work: false, steady: true, cooldown: false },
+                { type: 'step', duration: 300, power: { min: 100, max: 100, type: 'pct of FTP' }, work: true, steady: true, cooldown: false },
+            ] } as any)
+            Inject('WorkoutRide', { start: jest.fn(), init: jest.fn().mockReturnValue(workoutObserver), getWorkout: jest.fn().mockReturnValue(planned) })
+            const setSteps = jest.fn()
+            ;(service as any).keyMoments = { setSteps, update: jest.fn() }
+
+            // stands in for the real step adjustment (tested on its own)
+            jest.spyOn(service as any, 'onForward').mockImplementation(() => {
+                (service as any).actualWorkout.steps[0].end = 100
+                ;(service as any).actualWorkout.steps[1].start = 100
+            })
+            ;(service as any).initWorkout()
+            expect(setSteps).toHaveBeenLastCalledWith([OC({ start: 0, end: 300, intensity: 50 }), OC({ start: 300, end: 600, intensity: 100 })], 0)
+
+            workoutObserver.emit('forward', 100, 0)
+            expect(setSteps).toHaveBeenLastCalledWith([OC({ start: 0, end: 100 }), OC({ start: 100 })], 0)
+        })
+
+        test('the screenshot taken for a key moment is added to the activity with that moment', async () => {
+            jest.spyOn(service as any, 'activity', 'get').mockReturnValue({ time: 61 })
+            await service.takeScreenshot('summit')
+            expect(addScreenshot).toHaveBeenCalledWith({ fileName: '/shots/screenshot-1.jpg', time: 61, moment: 'summit', isHighlight: true })
+        })
+    })
 })

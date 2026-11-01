@@ -14,6 +14,8 @@ import type { PairingExitVia } from './types'
 import type { DesktopPairingDisplayProps } from '../desktop/types'
 import type { PairingOrchestrator } from './orchestrator'
 
+const DETAILS_WATCH_INTERVAL = 2000
+
 /**
  * Pairing page logic shared by all platforms: page lifecycle, device list, tile and button props,
  * navigation handlers and visit tracking.
@@ -36,6 +38,10 @@ export abstract class PairingPageService extends IncyclistPageService {
     // own, broader meaning elsewhere (skip re-pairing on the *next* ride start) and Simulate must
     // never set it - only a confirmed real device should.
     protected handingOffToRide: boolean = false
+
+    // device details lines on the tiles (see getDeviceDetails), re-checked while the page is open
+    protected shownDetails = new Map<unknown,{connectState?:string, details?:string}>()
+    protected detailsWatch?: ReturnType<typeof setInterval>
 
     constructor() {
         super('pairing')
@@ -119,6 +125,7 @@ export abstract class PairingPageService extends IncyclistPageService {
             // down when the observer goes away (see openPage(): stop() may or may not return a
             // promise). Whatever it still has in flight is fenced off by updatePage().
             void this.stateMachine.stop()
+            this.stopWatchingDeviceDetails()
 
             super.closePage()
 
@@ -217,12 +224,52 @@ export abstract class PairingPageService extends IncyclistPageService {
         else if (role)
             emptyFooter = getEmptyTileFooterText(role)
 
+        const details = this.getDeviceDetails(adapter?.adapter, connectState)
+
         return {
             title, capability,deviceName, disabled:false, connectState,value:value?.toString(),unit,interface:ifName,
-            role, helpText, emptyFooter,
+            details, role, helpText, emptyFooter,
             onClick, onUnselect
         }
 
+    }
+
+    // a Zwift Play is two devices: tell whether its second half is connected too. Nothing redraws
+    // the page when that half (dis)connects, so the lines shown are re-checked while it is open.
+    protected getDeviceDetails(adapter:any, connectState?:string):string|undefined {
+        const details = this.buildDeviceDetails(adapter, connectState)
+        if (typeof adapter?.getCompanionState==='function') {
+            this.shownDetails.set(adapter, {connectState, details})
+            this.watchDeviceDetails()
+        }
+        return details
+    }
+
+    protected watchDeviceDetails() {
+        if (this.detailsWatch)
+            return
+        this.detailsWatch = setInterval( ()=> {
+            const changed = [...this.shownDetails.entries()].some( ([adapter,shown]) => this.buildDeviceDetails(adapter,shown.connectState)!==shown.details)
+            if (changed)
+                this.updatePage()
+        }, DETAILS_WATCH_INTERVAL)
+    }
+
+    protected stopWatchingDeviceDetails() {
+        clearInterval(this.detailsWatch)
+        delete this.detailsWatch
+        this.shownDetails.clear()
+    }
+
+    protected buildDeviceDetails(adapter:any, connectState?:string):string|undefined {
+        if (connectState!=='connected' || typeof adapter?.getCompanionState!=='function')
+            return undefined
+        const companion = adapter.getCompanionState()
+        if (companion==='connected')
+            return 'Left and right connected'
+        if (companion==='searching')
+            return 'One half connected · press a button on the other to wake it'
+        return undefined
     }
 
     protected getDeviceListDisplayProps():DeviceSelectionProps|undefined {

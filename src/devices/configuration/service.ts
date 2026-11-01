@@ -332,7 +332,8 @@ export class DeviceConfigurationService  extends IncyclistService{
         }
 
         this.initCapabilties()
-            
+
+        let companionHalf = false
         this.settings.capabilities.forEach( c=> {
             if (c.devices.includes(udid) && c.selected!==undefined && c.selected!==null)
                 return udid;
@@ -340,6 +341,11 @@ export class DeviceConfigurationService  extends IncyclistService{
             const isBike = adapter.hasCapability(IncyclistCapability.Control)
 
             if ( adapter.hasCapability(c.capability) && c.capability!=='bike') {
+                if (c.capability===IncyclistCapability.AppControl && this.isOtherZwiftPlayHalf(c.devices,udid)) {
+                    this.logEvent({message:'Zwift Play half not added as controller', udid, reason:'other half of an already known Zwift Play'})
+                    companionHalf = true
+                    return
+                }
                 if (!c.devices.includes(udid)) {
                     c.devices.push(udid)
                 }
@@ -353,6 +359,10 @@ export class DeviceConfigurationService  extends IncyclistService{
 
         this.updateUserSettings()
         this.emitCapabiltyChanged()
+
+        // the adapter of the other half connects it - the caller must not use (or start) it
+        if (companionHalf)
+            return undefined
         return udid
 
     }
@@ -1064,6 +1074,49 @@ export class DeviceConfigurationService  extends IncyclistService{
         }
     }
 
+    // A Zwift Play consists of two BLE devices, both called "Zwift Play". The adapter of one half
+    // connects the other half itself (its "companion"), so the pair is one controller: the
+    // second half must not become a controller of its own - it would then be connected twice
+    // and every button press would be reported twice.
+    protected isZwiftPlayHalf(udid:string):boolean {
+        const settings = this.settings?.devices?.find( d=>d.udid===udid)?.settings as any
+        return settings?.interface==='ble' && settings?.protocol==='zwift-play' && settings?.name==='Zwift Play'
+    }
+
+    // A Zwift Play found by a scan is the other half of a listed one - unless every listed half is
+    // connected together with a different other half (then it belongs to another pair, e.g. a
+    // second controller in the household). To replace a pair, the old one has to be deleted.
+    protected isOtherZwiftPlayHalf(controllers:string[], udid:string):boolean {
+        if (!this.isZwiftPlayHalf(udid))
+            return false
+        const address = this.getDeviceAddress(udid)
+        const halves = controllers.filter( c=> c!==udid && this.isZwiftPlayHalf(c))
+        return halves.some( c=> {
+            const adapter = this.adapters?.[c] as unknown as { getCompanionAddress?: ()=>string|undefined }
+            const companion = adapter?.getCompanionAddress?.()
+            return companion===undefined || companion===address
+        })
+    }
+
+    protected getDeviceAddress(udid:string):string|undefined {
+        const settings = this.settings?.devices?.find( d=>d.udid===udid)?.settings as { address?:string }
+        return settings?.address
+    }
+
+    // settings from earlier versions can list both halves of a pair as controllers: keep only one
+    // of them (with more than two halves listed it can't be told which ones belong together)
+    protected mergeZwiftPlayHalves() {
+        const record = this.settings?.capabilities?.find( c=>c.capability===IncyclistCapability.AppControl)
+        const halves = (record?.devices??[]).filter( udid=>this.isZwiftPlayHalf(udid))
+        if (halves.length!==2)
+            return
+
+        const keep = halves.includes(record.selected) ? record.selected : halves[0]
+        record.devices = record.devices.filter( udid=> udid===keep || !halves.includes(udid))
+        this.logEvent({message:'merged Zwift Play halves into one controller', kept:keep, removed:halves.filter(u=>u!==keep)})
+        this.getUserSettings().set('capabilities',this.settings.capabilities)
+    }
+
     protected verifyCapabilitySettings() {
         const {capabilities} = this.settings
 
@@ -1077,6 +1130,7 @@ export class DeviceConfigurationService  extends IncyclistService{
         this.verifyCapabilityExists(IncyclistCapability.Speed)
         this.verifyCapabilityExists(IncyclistCapability.Cadence)
         this.verifyCapabilityExists(IncyclistCapability.AppControl)
+        this.mergeZwiftPlayHalves()
 
         if (bikeCapIdx!==-1) {
             capabilities.splice( bikeCapIdx,1)
@@ -1222,13 +1276,15 @@ export class DeviceConfigurationService  extends IncyclistService{
     
                     capability: c.capability,
                     disabled: c.disabled||false,
-                    devices: (c.devices??[]).filter( udid => devices.find( d=> d.udid===udid)).map( udid=>  {
+                    devices: (c.devices??[]).filter( udid => devices.find( d=> d.udid===udid)).map( (udid,_idx,listed)=>  {
                         const adapter = adapters[udid]                                   
                         const device = devices.find( d=> d.udid===udid)
                         const mode = device.mode
                         const modeSetting = device.modes ? device.modes[mode] : undefined
                         const interfaceName = device.settings.interface as string
-                        const name = device?.displayName??adapter?.getUniqueName()??adapter?.getName()
+                        // one pair is just "Zwift Play"; several keep their address suffix to be told apart
+                        const singlePlay = this.isZwiftPlayHalf(udid) && listed.filter( u=>this.isZwiftPlayHalf(u)).length===1
+                        const name = singlePlay ? 'Zwift Play' : device?.displayName??adapter?.getUniqueName()??adapter?.getName()
                         return { udid, name,interface:interfaceName, selected:udid===c.selected, mode, modeSetting}
                     })
                 }

@@ -306,6 +306,38 @@ describe('DesktopPairingPageService - desktop behaviour matrix', ()=> {
 
     describe('tiles', ()=> {
 
+        test('a Zwift Play tile tells whether both halves are connected, and follows changes', ()=> {
+            jest.useFakeTimers()
+            try {
+                let companion = 'searching'
+                const adapter = { getInterface: ()=>'ble', getCompanionState: ()=>companion }
+                setPairingState({ adapters:[{ udid:'play', adapter }] })
+                const tile = ()=> (service as any).getCapabilityDisplayProps({ capability:IncyclistCapability.AppControl, deviceName:'Zwift Play', connectState:'connected', selected:'play' })
+                const onUpdate = jest.fn()
+                ;(service as any).pageObserver.on('page-update', onUpdate)
+
+                expect(tile().details).toBe('One half connected · press a button on the other to wake it')
+
+                // the other half connects: the page is asked to redraw, without any other event
+                companion = 'connected'
+                jest.advanceTimersByTime(2100)
+                expect(onUpdate).toHaveBeenCalled()
+                expect(tile().details).toBe('Left and right connected')
+
+                // no details for other devices
+                expect((service as any).getCapabilityDisplayProps({ capability:IncyclistCapability.Power, deviceName:'Tacx Neo', connectState:'connected' }).details).toBeUndefined()
+
+                service.closePage()
+                onUpdate.mockClear()
+                companion = 'searching'
+                jest.advanceTimersByTime(5000)
+                expect(onUpdate).not.toHaveBeenCalled()
+            }
+            finally {
+                jest.useRealTimers()
+            }
+        })
+
         test('Tile unselect unselects the capability', ()=> {
             ;(service as any).onCapabilityUnselect(IncyclistCapability.Power)
 

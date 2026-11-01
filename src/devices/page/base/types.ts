@@ -53,6 +53,8 @@ export type CapabilityDisplayProps = {
     connectState?: DevicePairingStatus,
     value?: string
     unit?: string
+    /** a line about the device's state, e.g. whether both halves of a Zwift Play are connected */
+    details?: string
     disabled?: boolean
     role?: 'required' | 'optional'
     helpText?: { full: string, short: string }

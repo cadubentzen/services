@@ -1355,7 +1355,7 @@ export class DevicePairingService  extends IncyclistService{
             this.logEvent({message:'device detected',device:deviceSettings,udid, isScanning:this.isScanning()})
 
             if(!udid) {
-                this.logEvent({message:'device could not be added', reason:'add() failed'})
+                this.logEvent({message:'device could not be added', reason:'add() failed or the device is the second half of a Zwift Play'})
                 return;
             }
 

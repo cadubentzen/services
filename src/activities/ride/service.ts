@@ -1550,7 +1550,9 @@ export class ActivityRideService extends IncyclistService {
 
         const sport = this.getDeviceRide().getSport()??'cycling'
         const prefix = `${DEFAULT_SPORT_ACTIVITY_TITLE[sport]??'Incyclist'}`;
-        const title = `${prefix}: ${routeName}`
+        // the title is shown to people (activity list, Strava): use the route's title as the app
+        // shows it (e.g. "Polygyros"), not its internal name (e.g. "GR_Polygyros")
+        const title = `${prefix}: ${routeTitle ?? routeName}`
         const id = requestedId ?? generateUUID()
         const date = formatDateTime (new Date (), "%Y%m%d%H%M%S", false)
         const name = `${prefix}-${date}`

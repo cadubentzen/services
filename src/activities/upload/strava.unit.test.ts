@@ -180,6 +180,20 @@ describe ('StravaUpload', ()=>{
 
         })
 
+        test('the description names the workout ridden',async ()=>{
+            const api = ApiMock({uploadResponse:{stravaId:'12345',externalId:'incyclist-id'}})
+            setupMocks({initialized:true,connected:true,api });
+
+            const activity:Partial<ActivityDetails>  = {
+                fitFileName:'test.fit',
+                title:'Incyclist Ride: Polygyros',
+                workout: {name:'45min Z2'} as any,
+            }
+
+            await service.upload(activity as ActivityDetails,'fit')
+            expect(api.upload).toHaveBeenCalledWith('test.fit',{name: 'Incyclist Ride: Polygyros', description: 'Workout: 45min Z2', format: 'fit'})
+        })
+
         test('upload failed',async ()=>{
             const api = ApiMock({uploadError:'TEST'})
             setupMocks({initialized:true,connected:true,api });         

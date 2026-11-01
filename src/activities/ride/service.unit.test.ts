@@ -175,6 +175,18 @@ describe('ActivityRideService',()=>{
             })
 
         })
+        test('the title uses the route title shown in the app, not its internal name',()=>{
+            const route  = createFromJson(video as unknown as RouteApiDetail)
+            route.description.originalName = 'GR_Polygyros'
+            route.description.title = 'Polygyros'
+
+            mockServices(service,{route,startSettings:{startPos:0,realityFactor:100,type:'Route'}})
+            service.init()
+            expect(service.getActivity()).toMatchObject({
+                title:'Incyclist Ride: Polygyros',
+                route:{name:'GR_Polygyros', title:'Polygyros'}
+            })
+        })
         test('Video from different start position',()=>{
             // TODO
         })

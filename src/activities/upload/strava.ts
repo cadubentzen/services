@@ -85,7 +85,7 @@ export class StravaUpload extends IncyclistService implements IActivityUpload {
             const fileName =  activity[`${lcFormat}FileName`];
             const res = await this.getApi().upload(fileName,{
                 name: activity.title,
-                description: '',
+                description: this.getDescription(activity),
                 format: this.getStravaFormat(format)                
             })
             this.logEvent({message:'Strava Upload success', activityId: res.stravaId})
@@ -125,6 +125,12 @@ export class StravaUpload extends IncyclistService implements IActivityUpload {
      */
     getUrl(activityId:string):string {
         return `https://www.strava.com/activities/${activityId}`
+    }
+
+    /** the activity's description on Strava: the workout ridden, if any */
+    protected getDescription(activity:ActivityDetails):string {
+        const workout = activity.workout?.name?.trim()
+        return workout ? `Workout: ${workout}` : ''
     }
 
     protected getStravaFormat(format:string):StravaFormat {

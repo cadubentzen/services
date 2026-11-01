@@ -48,7 +48,8 @@ function getMaxPower(step: StepDefinition, ftp?: number): number | undefined {
     return res
 }
 
-function getZone(power?: number, ftp?: number): number | undefined {
+/** Training zone (1..7) for a power given in % of FTP; 0 if FTP is unknown, undefined without power. */
+export function getZone(power?: number, ftp?: number): number | undefined {
     if (power === undefined)
         return undefined
     if (ftp === undefined)

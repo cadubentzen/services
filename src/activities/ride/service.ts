@@ -12,7 +12,8 @@ import { RouteSettings } from "../../routes/list/cards/types";
 import { v4 as generateUUID } from 'uuid';
 import { RouteInfo, RoutePoint } from "../../routes/base/types";
 import { ActivityDashboardDataItem, ActivityState, ActivitySummaryDisplayProperties, ActivityWorkoutSummaryGraph } from "./types";
-import { getWorkoutGraphSeries } from "../../workouts";
+import { getWorkoutGraphSeries, useWorkoutRide } from "../../workouts";
+import { getHeartrateGauge, getPowerGauge } from "./gauges";
 import type { WorkoutGraphActuals, WorkoutGraphPlan } from "../../ride/page";
 import { addDetails, checkIsLoop, getElevationGainAt, getNextPosition, getPosition, getRouteHash, validateRoute } from "../../routes/base/utils/route";
 import { Route } from "../../routes/base/model/route";
@@ -445,6 +446,21 @@ export class ActivityRideService extends IncyclistService {
         return { value: C(speed, 'speed')?.toFixed(1)??'', unit: U('speed') }
     }
 
+    protected getDashboardFtp(): number | undefined {
+        const workout = this.getWorkoutRide()
+        return workout.inUse() ? workout.getCurrentFtp() : this.activity?.user?.ftp
+    }
+
+    protected getDashboardPowerTarget(): { min: number, max: number } | undefined {
+        const workout = this.getWorkoutRide()
+        if (!workout.inUse())
+            return undefined
+        const limits = workout.getCurrentLimits()
+        if (limits?.maxPower === undefined)
+            return undefined
+        return { min: limits.minPower ?? limits.maxPower, max: limits.maxPower }
+    }
+
     protected buildDashboardInfo(currentValues, avgMaxStats, display) {
 
 
@@ -475,13 +491,15 @@ export class ActivityRideService extends IncyclistService {
         });
 
 
-        info.push({ title: 'Power', data: [{ value: formatNumber(power, 0), unit: 'W' }, powerDetails], dataState: this.current.dataState?.power });
+        info.push({ title: 'Power', data: [{ value: formatNumber(power, 0), unit: 'W' }, powerDetails], dataState: this.current.dataState?.power,
+            gauge: getPowerGauge(power, this.getDashboardFtp(), this.getDashboardPowerTarget()) });
         if (this.activity?.routeType !== 'Free-Ride' && this.activity?.routeType !== 'None') {
             const rf = this.activity?.realityFactor ?? 100;
             const slopeInfo = rf === 100 ? '' : `RF ${rf.toFixed(0)}%`;
             info.push({ title: 'Slope', data: [{ value: formatNumber(slope, 1), unit: '%', info: slopeInfo }, elevationGain] });
         }
-        info.push({ title: 'Heartrate', data: [{ value: formatNumber(heartrate, 0), unit: 'bpm' }, heartrateDetails], dataState: this.current.dataState?.heartrate });
+        info.push({ title: 'Heartrate', data: [{ value: formatNumber(heartrate, 0), unit: 'bpm' }, heartrateDetails], dataState: this.current.dataState?.heartrate,
+            gauge: getHeartrateGauge(heartrate, this.getUserSettings().getValue('user.maxHr', undefined)) });
 
         const cadenceUnit = this.activity.sport==='rowing' ? 'spm' : 'rpm'
         const cadenceInfo = { title: 'Cadence', data: [{ value: formatNumber(cadence, 0), unit: cadenceUnit }, cadenceDetails], dataState: this.current.dataState?.cadence }
@@ -1910,6 +1928,11 @@ export class ActivityRideService extends IncyclistService {
         const C = c.convert.bind(c)
         const U = c.getUnit.bind(c)
         return [C,U]
+    }
+
+    @Injectable
+    protected getWorkoutRide() {
+        return useWorkoutRide()
     }
 
     @Injectable

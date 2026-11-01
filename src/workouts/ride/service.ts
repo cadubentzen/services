@@ -897,12 +897,21 @@ export class WorkoutRide extends IncyclistService{
      * @returns [[ActiveWorkoutLimit]] the current limit or _undefined_ if the workout hasn't bee initialized or already was completed
      * 
      */
-    getCurrentLimits():ActiveWorkoutLimit {
+    getCurrentLimits():ActiveWorkoutLimit | undefined {
         if (this.state==='idle' || this.state==='completed') {
             return undefined;
         }
 
         return this.currentLimits
+    }
+
+    /**
+     * Provides the FTP (in W) that is used for the current workout
+     *
+     * @returns the FTP or _undefined_ if the workout has not been initialized
+     */
+    getCurrentFtp(): number | undefined {
+        return this.settings?.ftp
     }
 
     /**

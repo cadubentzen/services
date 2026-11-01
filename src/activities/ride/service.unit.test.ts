@@ -40,8 +40,10 @@ describe('ActivityRideService',()=>{
 
     const mockServices = (svc:any,props?:any) => {
         svc.getUserSettings = jest.fn( ()=> ({
-            get:jest.fn( mockUserSettingsGet)
+            get:jest.fn( mockUserSettingsGet),
+            getValue:jest.fn( mockUserSettingsGet)
         }))
+        svc.getWorkoutRide = jest.fn( ()=> props?.workoutRide ?? ({ inUse: jest.fn().mockReturnValue(false) }) )
         svc.getRouteList = jest.fn( ()=> ({
             getSelected: jest.fn().mockReturnValue(props?.route),
             // `route:null` models the route list after unselect() - which is what a workout-only
@@ -699,6 +701,73 @@ describe('ActivityRideService',()=>{
             expect(result.speedDetails.label).toBe('avg')
         })
 
+    })
+
+    describe('dashboard gauges',()=>{
+        let service:ActivityRideService
+        const getItem = (title:string) => service.getDashboardDisplayProperties().find(i=>i.title===title)
+
+        beforeEach( ()=>{
+            service = new ActivityRideService()
+            jest.useFakeTimers().setSystemTime(new Date('2020-01-01'))
+        })
+        afterEach( ()=>{
+            service.stop()
+            service.reset()
+            jest.useRealTimers()
+        })
+
+        const setup = (props?:any) => {
+            const route  = createFromJson(sydney as unknown as RouteApiDetail)
+            mockServices(service,{route,startSettings:{startPos:0,realityFactor:100,type:'Route'},...props})
+            service.init()
+            ;(service as any).current.deviceData = { power:152, heartrate:112 }
+        }
+
+        test('Power item carries a gauge based on the activity FTP',()=>{
+            setup()
+            expect(getItem('Power').gauge.zone).toBe(2)
+        })
+
+        test('Power gauge uses the workout FTP and target while a workout runs',()=>{
+            const workoutRide = {
+                inUse: jest.fn().mockReturnValue(true),
+                getCurrentFtp: jest.fn().mockReturnValue(250),
+                getCurrentLimits: jest.fn().mockReturnValue({minPower:180,maxPower:200})
+            }
+            setup({workoutRide})
+            const gauge = getItem('Power').gauge
+            expect(gauge.max).toBe(400)
+            expect(gauge.target).toEqual({min:180,max:200})
+        })
+
+        test('Power gauge is neutral without FTP and has no target without maxPower',()=>{
+            const workoutRide = {
+                inUse: jest.fn().mockReturnValue(true),
+                getCurrentFtp: jest.fn().mockReturnValue(undefined),
+                getCurrentLimits: jest.fn().mockReturnValue({})
+            }
+            setup({workoutRide})
+            const gauge = getItem('Power').gauge
+            expect(gauge.zones).toBeUndefined()
+            expect(gauge.target).toBeUndefined()
+        })
+
+        test('Heartrate gauge is neutral without user.maxHr',()=>{
+            setup()
+            expect(getItem('Heartrate').gauge.zones).toBeUndefined()
+        })
+
+        test('Heartrate item carries a gauge from user.maxHr',()=>{
+            setup()
+            ;(service as any).getUserSettings = jest.fn( ()=> ({
+                get:jest.fn( mockUserSettingsGet),
+                getValue:jest.fn( (key:string)=> key==='user.maxHr' ? 185 : undefined)
+            }))
+            const gauge = getItem('Heartrate').gauge
+            expect(gauge.max).toBe(185)
+            expect(gauge.zone).toBe(1)
+        })
     })
 
     describe('ActiveRideService', () => {

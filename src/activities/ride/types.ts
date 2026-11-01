@@ -40,11 +40,22 @@ export interface ActivityDashboardDataItem {
     info?: string
 }
 
+export interface DashboardGaugeZone { from: number; to: number; color: string; name: string }
+
+export interface DashboardGauge {
+    min: number                       // scale start, in the item's unit (W or bpm)
+    max: number                       // scale end
+    zones?: DashboardGaugeZone[]      // absent: neutral arc (FTP / max HR unknown)
+    zone?: number                     // index into zones for the current value; absent without value or zones
+    target?: { min: number; max: number }   // workout power target, W
+}
+
 export interface ActivityDashboardItem {
     title: string
     data: ActivityDashboardDataItem[]
     size?: number
     dataState?: HealthStatus
+    gauge?: DashboardGauge
 }
 
 export interface CurrentActivityData { 

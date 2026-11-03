@@ -754,6 +754,57 @@ describe('RideDisplayService', () => {
         })
     })
 
+    describe('takeScreenshot - album', () => {
+        let service: RideDisplayService
+        let takeScreenshot: jest.Mock
+        let activity: Record<string, unknown>
+
+        beforeEach(() => {
+            takeScreenshot = jest.fn().mockResolvedValue('/pictures/screenshot-1.jpg')
+            Inject('UIBinding', { takeScreenshot })
+            Inject('ActivityRide', { getActivity: () => activity, addScreenshot: jest.fn() })
+            service = new RideDisplayService()
+            service.reset()
+            service = new RideDisplayService()
+            ;(service as any).displayService = { getScreenshotInfo: (fileName: string, time: number) => ({ fileName, time }) }
+        })
+
+        afterEach(() => {
+            service.reset()
+            Inject('UIBinding', null)
+            Inject('ActivityRide', null)
+            jest.clearAllMocks()
+        })
+
+        const album = () => takeScreenshot.mock.calls[0][0].album
+
+        test('the screenshots of a ride on a route are kept in an album named after the day and the route', async () => {
+            // local time: the day the rider sees in the calendar
+            activity = { time: 10, startTime: new Date(2026, 10, 3, 18, 5).toISOString(), routeType: 'Video', route: { name: 'FR_Mensac', title: 'Mensac Loop' } }
+            await service.takeScreenshot()
+            expect(takeScreenshot).toHaveBeenCalledWith({ fileName: expect.stringMatching(/^screenshot-\d{14}\.jpg$/), album: '2026-11-03 Mensac Loop' })
+        })
+
+        test('the route name is used if the route has no title', async () => {
+            activity = { time: 10, startTime: new Date(2026, 0, 9, 7, 0).toISOString(), routeType: 'GPX', route: { name: 'Polygyros' } }
+            await service.takeScreenshot()
+            expect(album()).toBe('2026-01-09 Polygyros')
+        })
+
+        test('a workout ridden without a route is named after the workout', async () => {
+            activity = { time: 10, startTime: new Date(2026, 10, 3, 18, 5).toISOString(), routeType: 'None', route: { name: 'Workout' } }
+            ;(service as any).actualWorkout = { name: '45min Z2' }
+            await service.takeScreenshot()
+            expect(album()).toBe('2026-11-03 45min Z2')
+        })
+
+        test('no album without an activity', async () => {
+            activity = undefined
+            await service.takeScreenshot()
+            expect(album()).toBeUndefined()
+        })
+    })
+
     describe('shifting buttons after a workout', () => {
         let service: RideDisplayService
         let workoutInUse: boolean

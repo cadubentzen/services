@@ -314,7 +314,7 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
             const fileName = this.getScreenshotName()
         
             this.logEvent({ message: 'capture screen', fileName });   
-            const fullPath = await this.getUIBinding().takeScreenshot({ fileName });
+            const fullPath = await this.getUIBinding().takeScreenshot({ fileName, album: this.getScreenshotAlbum() });
             const success = fullPath !== null && fullPath !== undefined;
             this.logEvent({ message: 'Screenshot done', result: { success, fileName: fullPath } });
 
@@ -1331,6 +1331,24 @@ export class RideDisplayService extends IncyclistService implements ICurrentRide
         const date = formatDateTime(new Date(), "%Y%m%d%H%M%S", false);
         const fileName = `screenshot-${date}.jpg`;
         return fileName
+    }
+
+    /**
+     * The album the ride's screenshots are kept in: the day the ride started and what is ridden -
+     * the route, or the workout if there is no route (e.g. "2026-11-03 Mensac Loop")
+     */
+    protected getScreenshotAlbum():string|undefined {
+        const activity = this.activity
+        if (!activity)
+            return undefined
+
+        const started = activity.startTime ? new Date(activity.startTime) : new Date()
+        const date = formatDateTime(started, '%Y-%m-%d', false) ?? formatDateTime(new Date(), '%Y-%m-%d', false)
+        const name = activity.routeType==='None'
+            ? this.actualWorkout?.name ?? activity.route?.name
+            : activity.route?.title ?? activity.route?.name
+
+        return name ? `${date} ${name}` : date
     }
 
     protected toggleOverlay(overlay:string) {   

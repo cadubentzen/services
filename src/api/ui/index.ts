@@ -19,6 +19,12 @@ export type SelectDirectoryResult = {
 
 export type TakeScreenshotProps = {
     fileName?: string
+    /**
+     * Album (folder) the screenshot belongs to: the day and what was ridden, e.g.
+     * "2026-11-03 Mensac Loop". Platforms with a pictures folder keep it there, in a folder
+     * of that name; others may ignore it.
+     */
+    album?: string
 }
 
 export interface INativeUI  {

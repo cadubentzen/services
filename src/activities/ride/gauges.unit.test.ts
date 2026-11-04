@@ -53,4 +53,49 @@ describe('getHeartrateGauge', () => {
     test('without max HR the gauge is neutral', () => {
         expect(getHeartrateGauge(112, undefined)).toEqual({ min: 40, max: 200 })
     })
+
+    describe('with a threshold heart rate', () => {
+        // zones as intervals.icu shows them for LTHR 180 / max HR 198
+        const EXPECTED = [
+            { name: 'Z1 Recovery', from: 0, to: 144 },
+            { name: 'Z2 Aerobic', from: 145, to: 161 },
+            { name: 'Z3 Tempo', from: 162, to: 168 },
+            { name: 'Z4 SubThreshold', from: 169, to: 179 },
+            { name: 'Z5 SuperThreshold', from: 180, to: 184 },
+            { name: 'Z6 Aerobic Capacity', from: 185, to: 189 },
+            { name: 'Z7 Anaerobic', from: 190, to: 198 }
+        ]
+
+        test('seven zones in % of threshold HR', () => {
+            const g = getHeartrateGauge(150, 198, 180)
+            expect(g.zones.map(z => z.name)).toEqual(EXPECTED.map(z => z.name))
+            expect(g.zones.map(z => z.from).slice(1)).toEqual(EXPECTED.map(z => z.from).slice(1))
+            expect(g.zones.map(z => z.to)).toEqual([145, 162, 169, 180, 185, 190, 198])
+            expect(g.zones[6].color).toBe(WORKOUT_ZONE_COLORS[7])
+            expect(g.max).toBe(198)
+            expect(g.min).toBe(g.zones[0].from)
+        })
+        test('each bpm falls in the zone intervals.icu shows', () => {
+            EXPECTED.forEach((z, i) => {
+                if (i > 0)
+                    expect(getHeartrateGauge(z.from, 198, 180).zone).toBe(i)
+                expect(getHeartrateGauge(z.to, 198, 180).zone).toBe(i)
+            })
+        })
+        test('heart rate above max HR stays in the last zone', () => {
+            expect(getHeartrateGauge(205, 198, 180).zone).toBe(6)
+        })
+        test('without max HR the scale ends at 110 % of threshold HR', () => {
+            const g = getHeartrateGauge(150, undefined, 180)
+            expect(g.zones).toHaveLength(7)
+            expect(g.max).toBe(198)
+        })
+        test('a max HR below the last zone does not cut it off', () => {
+            const g = getHeartrateGauge(150, 185, 180)
+            expect(g.max).toBe(198)
+        })
+        test('without heart rate there is no current zone', () => {
+            expect(getHeartrateGauge(undefined, 198, 180).zone).toBeUndefined()
+        })
+    })
 })

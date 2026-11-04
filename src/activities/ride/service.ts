@@ -510,7 +510,7 @@ export class ActivityRideService extends IncyclistService {
                 elevation: this.getElevationProgress() });
         }
         info.push({ title: 'Heartrate', data: [{ value: formatNumber(heartrate, 0), unit: 'bpm' }, heartrateDetails], dataState: this.current.dataState?.heartrate,
-            gauge: getHeartrateGauge(heartrate, this.getUserSettings().getValue('user.maxHr', undefined)) });
+            gauge: getHeartrateGauge(heartrate, this.getUserSettings().getValue('user.maxHr', undefined), this.getUserSettings().getValue('user.thresholdHr', undefined)) });
 
         const cadenceUnit = this.activity.sport==='rowing' ? 'spm' : 'rpm'
         const cadenceInfo = { title: 'Cadence', data: [{ value: formatNumber(cadence, 0), unit: cadenceUnit }, cadenceDetails], dataState: this.current.dataState?.cadence }

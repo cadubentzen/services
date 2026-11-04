@@ -841,6 +841,19 @@ describe('ActivityRideService',()=>{
             expect(gauge.max).toBe(185)
             expect(gauge.zone).toBe(1)
         })
+
+        test('Heartrate gauge uses the zones of user.thresholdHr',()=>{
+            setup()
+            const settings: Record<string,number> = { 'user.maxHr': 198, 'user.thresholdHr': 180 }
+            ;(service as any).getUserSettings = jest.fn( ()=> ({
+                get:jest.fn( mockUserSettingsGet),
+                getValue:jest.fn( (key:string)=> settings[key])
+            }))
+            const gauge = getItem('Heartrate').gauge
+            expect(gauge.zones).toHaveLength(7)
+            expect(gauge.max).toBe(198)
+            expect(gauge.zone).toBe(0)
+        })
     })
 
     describe('dashboard gear count',()=>{

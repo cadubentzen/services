@@ -95,6 +95,14 @@ describe('getHeartrateGauge', () => {
         test('heart rate above max HR stays in the last zone', () => {
             expect(getHeartrateGauge(205, 198, 180).zone).toBe(6)
         })
+        test('the scale starts at 70 % of threshold HR, so Z1 is about as wide as Z2', () => {
+            const g = getHeartrateGauge(150, 198, 180)
+            expect(g.min).toBe(126)
+            expect(g.zones[0]).toMatchObject({ from: 126, to: 145 })
+        })
+        test('heart rate below the scale is still Z1', () => {
+            expect(getHeartrateGauge(90, 198, 180).zone).toBe(0)
+        })
         test('without max HR the scale ends at 110 % of threshold HR', () => {
             const g = getHeartrateGauge(150, undefined, 180)
             expect(g.zones).toHaveLength(7)

@@ -21,7 +21,8 @@ const HR_GAUGE_DEFAULT_MAX = 200
 const THRESHOLD_HR_ZONE_NAMES = ['Z1 Recovery', 'Z2 Aerobic', 'Z3 Tempo', 'Z4 SubThreshold', 'Z5 SuperThreshold', 'Z6 Aerobic Capacity', 'Z7 Anaerobic']
 // lower bound of each zone (from Z2 on) in % of the threshold HR
 const THRESHOLD_HR_ZONE_STARTS = [81, 90, 94, 100, 103, 106]
-const THRESHOLD_HR_GAUGE_MIN_PCT = 55
+// the scale starts here: lower heart rates are Z1 anyway, and Z1 would otherwise take half of the arc
+const THRESHOLD_HR_GAUGE_MIN_PCT = 70
 const THRESHOLD_HR_GAUGE_MAX_PCT = 110
 
 function buildZones(names: string[], limitsPct: number[], startPct: number, base: number): DashboardGaugeZone[] {

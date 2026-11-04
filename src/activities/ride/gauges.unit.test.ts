@@ -10,6 +10,16 @@ describe('getPowerGauge', () => {
         expect(g.zones[2]).toEqual({ from: 150, to: 180, name: 'Z3 Tempo', color: WORKOUT_ZONE_COLORS[3] })
         expect(g.zone).toBe(2)
     })
+    test('zones named and bounded as intervals.icu shows them', () => {
+        // FTP 143: Z1 1-78w, Z2 79-107w, Z3 108-128w, Z4 129-150w, Z5 151-171w, Z6 172-214w, Z7 215w+
+        const g = getPowerGauge(undefined, 143)
+        expect(g.zones.map(z => z.name)).toEqual(['Z1 Active Recovery', 'Z2 Endurance', 'Z3 Tempo', 'Z4 Threshold', 'Z5 VO2 Max', 'Z6 Anaerobic', 'Z7 Neuromuscular'])
+        const firstWatts = [79, 108, 129, 151, 172, 215]
+        firstWatts.forEach((w, i) => {
+            expect(getPowerGauge(w - 1, 143).zone).toBe(i)
+            expect(getPowerGauge(w, 143).zone).toBe(i + 1)
+        })
+    })
     test('zone boundaries are inclusive', () => {
         expect(getPowerGauge(110, 200).zone).toBe(0)
         expect(getPowerGauge(111, 200).zone).toBe(1)

@@ -59,7 +59,7 @@ exports[`ActivityRideService getDashboardDisplayProperties directly after init, 
         {
           "color": "#7f7f7f",
           "from": 0,
-          "name": "Z1 Recovery",
+          "name": "Z1 Active Recovery",
           "to": 110,
         },
         {
@@ -83,7 +83,7 @@ exports[`ActivityRideService getDashboardDisplayProperties directly after init, 
         {
           "color": "#ff6639",
           "from": 210,
-          "name": "Z5 VO2max",
+          "name": "Z5 VO2 Max",
           "to": 240,
         },
         {
@@ -95,7 +95,7 @@ exports[`ActivityRideService getDashboardDisplayProperties directly after init, 
         {
           "color": "#ea39ff",
           "from": 300,
-          "name": "Z7 Sprint",
+          "name": "Z7 Neuromuscular",
           "to": 320,
         },
       ],

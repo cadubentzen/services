@@ -1,7 +1,8 @@
 import { WORKOUT_ZONE_COLORS, getZone } from '../../workouts/base/graph/series'
 import { DashboardGauge, DashboardGaugeZone } from './types'
 
-const POWER_ZONE_NAMES = ['Z1 Recovery', 'Z2 Endurance', 'Z3 Tempo', 'Z4 Threshold', 'Z5 VO2max', 'Z6 Anaerobic', 'Z7 Sprint']
+// Coggan's zones, named as intervals.icu names them
+const POWER_ZONE_NAMES = ['Z1 Active Recovery', 'Z2 Endurance', 'Z3 Tempo', 'Z4 Threshold', 'Z5 VO2 Max', 'Z6 Anaerobic', 'Z7 Neuromuscular']
 // upper bound of each power zone in % of FTP
 const POWER_ZONE_LIMITS = [55, 75, 90, 105, 120, 150, 160]
 const POWER_GAUGE_MAX_PCT = 160

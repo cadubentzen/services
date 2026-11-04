@@ -46,7 +46,7 @@ export class UserSettingsDisplayService extends IncyclistService {
 
     getDisplayProps():UserSettingsDisplayProps {
         const user = this.getUser()
-        const {username,ftp,maxHr,imageUrl } = user
+        const {username,ftp,maxHr,thresholdHr,imageUrl } = user
         const c = this.getUnitConverter()
 
         const weightValue = user?.weight===undefined ? undefined : c.convert( user.weight, 'weight',{digits:1}) 
@@ -61,12 +61,14 @@ export class UserSettingsDisplayService extends IncyclistService {
             username,
             ftp,
             maxHr,
+            thresholdHr,
             weight: { value: weightValue, unit: weightUnit},
             units,
             unitsOptions,
             onChangeWeight: this.setWeight.bind(this),
             onChangeFtp: this.setFtp.bind(this),
             onChangeMaxHr: this.setMaxHr.bind(this),
+            onChangeThresholdHr: this.setThresholdHr.bind(this),
             onChangeName: this.setName.bind(this),
             onChangeUnits: this.setUnits.bind(this)
         }
@@ -109,6 +111,17 @@ export class UserSettingsDisplayService extends IncyclistService {
     setMaxHr( maxHr: number | null | undefined) {
         const value = (maxHr===null || maxHr===undefined) ? null : maxHr
         this.getUserSettings().set('user.maxHr',value)
+        this.emitChanged()
+    }
+
+    /**
+     * Stores the user's threshold (lactate threshold) heart rate, the base of the heart rate zones
+     *
+     * @param thresholdHr threshold heart rate in bpm; an empty value clears the setting
+     */
+    setThresholdHr( thresholdHr: number | null | undefined) {
+        const value = (thresholdHr===null || thresholdHr===undefined) ? null : thresholdHr
+        this.getUserSettings().set('user.thresholdHr',value)
         this.emitChanged()
     }
 

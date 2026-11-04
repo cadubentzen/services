@@ -63,7 +63,48 @@ describe('UserSettingsDisplayService', () => {
         })
     })
 
+    describe('setThresholdHr', () => {
+
+        test('setThresholdHr stores user.thresholdHr', () => {
+            setup()
+
+            service.setThresholdHr(170)
+
+            expect(userSettings.set).toHaveBeenCalledWith('user.thresholdHr', 170)
+        })
+
+        test('setThresholdHr with empty value stores null', () => {
+            setup()
+
+            service.setThresholdHr(undefined)
+            service.setThresholdHr(null)
+
+            expect(userSettings.set).toHaveBeenNthCalledWith(1, 'user.thresholdHr', null)
+            expect(userSettings.set).toHaveBeenNthCalledWith(2, 'user.thresholdHr', null)
+        })
+
+        test('setThresholdHr emits changed on an open observer', () => {
+            setup({ thresholdHr: 170 })
+            const observer = service.open()
+            const onChanged = jest.fn()
+            observer.on('changed', onChanged)
+
+            service.setThresholdHr(175)
+
+            expect(onChanged).toHaveBeenCalledWith({ thresholdHr: 175 })
+        })
+    })
+
     describe('getDisplayProps', () => {
+
+        test('display props expose thresholdHr and onChangeThresholdHr', () => {
+            setup({ thresholdHr: 170 })
+
+            const props = service.getDisplayProps()
+
+            expect(props.thresholdHr).toBe(170)
+            expect(typeof props.onChangeThresholdHr).toBe('function')
+        })
 
         test('display props expose maxHr and onChangeMaxHr', () => {
             setup({ maxHr: 185 })

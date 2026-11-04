@@ -8,6 +8,7 @@ export type UserSettingsDisplayProps = {
     username: string,
     ftp: number,
     maxHr?: number,
+    thresholdHr?: number,
     weight: UserWeight
     units?: string,
     unitsOptions: Array<string>
@@ -16,6 +17,7 @@ export type UserSettingsDisplayProps = {
     onChangeName: (value:string)=>void
     onChangeFtp: (value:number)=>void
     onChangeMaxHr: (value:number|null)=>void
+    onChangeThresholdHr: (value:number|null)=>void
     onChangeUnits: (value:string)=>void
 }
 
@@ -23,5 +25,6 @@ export type TUserSettings = {
     username: string,
     ftp: number,
     maxHr?: number,
+    thresholdHr?: number,
     weight: number
 }
